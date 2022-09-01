@@ -9,16 +9,11 @@ public class PeopleItemProcessor implements ItemProcessor<People, People> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PeopleItemProcessor.class);
 
     @Override
-    public People process(final People coffee) throws Exception {
-//        String brand = coffee.getBrand().toUpperCase();
-//        String origin = coffee.getOrigin().toUpperCase();
-//        String chracteristics = coffee.getCharacteristics().toUpperCase();
-//
-//        People transformedCoffee = new People(brand, origin, chracteristics);
-//        LOGGER.info("Converting ( {} ) into ( {} )", coffee, transformedCoffee);
-//
-//        return transformedCoffee;
+    public People process(final People people) throws Exception {
     	
-    	return null;
+    	System.out.println("Inserting employee : " + people);
+    	
+    	return people;
+    
     }
 }

@@ -2,28 +2,40 @@ package br.com.batchenterprisemanagement.batch;
 
 public class People {
 
-	private String firstName;
+	private String firstname;
 	
-	private String lastName;
+	private String lastname;
 	
 	private String city;
 	
 	private String age;
 
-	public String getFirstName() {
-		return firstName;
+	public People(String firstname, String lastname, String city, String age) {
+		super();
+		this.firstname = firstname;
+		this.lastname = lastname;
+		this.city = city;
+		this.age = age;
 	}
 
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
+	public People() {
+		super();
 	}
 
-	public String getLastName() {
-		return lastName;
+	public String getFirstname() {
+		return firstname;
 	}
 
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
+	public void setFirstname(String firstname) {
+		this.firstname = firstname;
+	}
+
+	public String getLastname() {
+		return lastname;
+	}
+
+	public void setLastname(String lastname) {
+		this.lastname = lastname;
 	}
 
 	public String getCity() {
@@ -41,5 +53,5 @@ public class People {
 	public void setAge(String age) {
 		this.age = age;
 	}
-	
+		
 }
