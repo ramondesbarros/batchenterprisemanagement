@@ -58,13 +58,6 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 
 	@Bean
 	public FlatFileItemReader<People> reader() {
-
-//		return new FlatFileItemReaderBuilder<People>()
-//				.name("peopleItemReader")
-//				.resource(new ClassPathResource("fileenterprisemanagement.csv"))
-//				.lineMapper(lineMapper())
-//				.linesToSkip(1)
-//				.build();
 		
 		return new FlatFileItemReaderBuilder<People>()
 				.name("peopleItemReader")
