@@ -6,7 +6,7 @@ import org.springframework.batch.item.ItemProcessor;
 
 public class PeopleItemProcessor implements ItemProcessor<People, People> {
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(PeopleItemProcessor.class);
+	private static final Logger LOG = LoggerFactory.getLogger(PeopleItemProcessor.class);
 
     @Override
     public People process(final People people) throws Exception {

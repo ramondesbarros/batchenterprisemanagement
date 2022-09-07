@@ -4,31 +4,30 @@ import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.DefaultBatchConfigurer;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
-import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.core.io.FileSystemResource;
 
 @Configuration
 @EnableBatchProcessing
-public class BatchConfiguration extends DefaultBatchConfigurer {
+public class BatchConfiguration {
 
 	@Autowired
 	public JobBuilderFactory jobBuilderFactory;
@@ -36,40 +35,18 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 	@Autowired
 	public StepBuilderFactory stepBuilderFactory;
 
-//	@Value("${file.input}")
-//	private String fileInput;
-
-	@Bean
-	public LineMapper<People> lineMapper() {
-
-		DefaultLineMapper<People> lineMapper = new DefaultLineMapper<People>();
-		lineMapper.setLineTokenizer(new DelimitedLineTokenizer() {
-			{
-				setNames(new String[] { "firstname", "lastname", "city", "age" });
-			}
-		});
-		lineMapper.setFieldSetMapper(new BeanWrapperFieldSetMapper<People>() {
-			{
-				setTargetType(People.class);
-			}
-		});
-		return lineMapper;
-	}
+	@Value("${file.input}")
+	private String fileInput;
 
 	@Bean
 	public FlatFileItemReader<People> reader() {
-		
-		return new FlatFileItemReaderBuilder<People>()
-				.name("peopleItemReader")
-				.resource(new ClassPathResource("fileenterprisemanagement.csv"))
-				.delimited()
-				.names(new String[]{ "firstname", "lastname", "city", "age" })
-				  .fieldSetMapper(new BeanWrapperFieldSetMapper<People>() {{
-					   setTargetType(People.class);
-				  }})
-				.linesToSkip(1)
-				.build();
 
+		FlatFileItemReader<People> flatFileItemReader = new FlatFileItemReader<>();
+		flatFileItemReader.setResource(new FileSystemResource(fileInput));
+		flatFileItemReader.setName("CSV-Reader");
+		flatFileItemReader.setLineMapper(lineMapper());
+		flatFileItemReader.setLinesToSkip(1);
+		return flatFileItemReader;
 	}
 
 	@Bean
@@ -80,48 +57,44 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 	@Bean
 	public JdbcBatchItemWriter<People> writer(DataSource dataSource) {
 		return new JdbcBatchItemWriterBuilder<People>()
-				.itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<People>())
+				.itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
 				.sql("INSERT INTO people (firstname, lastname, city, age) VALUES (:firstname, :lastname, :city, :age)")
 				.dataSource(dataSource).build();
 	}
 
 	@Bean
-	public Job importProfileJob(JobCompletionNotificationListener listener, Step step1) {
-		return jobBuilderFactory
-				.get("importProfileJob")
-				.incrementer(new RunIdIncrementer())
-				.listener(listener)
-				.flow(step1)
-				.end()
-				.build();
-	}
-
-	@Bean
 	public Step step1(JdbcBatchItemWriter<People> writer) {
-		return stepBuilderFactory
-				.get("step1")
-				.<People, People>chunk(10)
-				.reader(reader())
-				.processor(processor())
-				.writer(writer)
-				.build();
+		return stepBuilderFactory.get("step1").<People, People>chunk(10).reader(reader()).processor(processor())
+				.writer(writer).build();
 	}
 
 	@Bean
-	public DataSource getDataSource() {
-		HikariDataSource dataSource = new HikariDataSource();
-		dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/batchenterprisemanagement");
-		dataSource.setUsername("dbase");
-		dataSource.setPassword("5yst3M@xls");
-		return dataSource;
+	public LineMapper<People> lineMapper() {
+
+		DefaultLineMapper<People> defaultLineMapper = new DefaultLineMapper<>();
+		DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
+
+		lineTokenizer.setDelimiter(",");
+		lineTokenizer.setStrict(false);
+		lineTokenizer.setNames("firstname", "lastname", "city", "age");
+
+		BeanWrapperFieldSetMapper<People> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
+		fieldSetMapper.setTargetType(People.class);
+
+		defaultLineMapper.setLineTokenizer(lineTokenizer);
+		defaultLineMapper.setFieldSetMapper(fieldSetMapper);
+
+		return defaultLineMapper;
 	}
 
 	@Bean
-	public JdbcTemplate jdbcTemplate(DataSource dataSource) {
-		return new JdbcTemplate(dataSource);
+	public Job job(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
+			ItemReader<People> itemReader, ItemProcessor<People, People> itemProcessor, ItemWriter<People> itemWriter) {
+
+		Step step = stepBuilderFactory.get("ETL-file-load").<People, People>chunk(100).reader(itemReader)
+				.processor(itemProcessor).writer(itemWriter).build();
+
+		return jobBuilderFactory.get("ETL-Load").incrementer(new RunIdIncrementer()).start(step).build();
 	}
 
-	@Override
-	public void setDataSource(DataSource dataSource) {
-	}
 }
